@@ -1,11 +1,15 @@
-# app/database.py
-
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 import os
 
-DATABASE_URL = "postgresql://trackfitdb_owner:BMwS3ubPIgT1@ep-late-band-a4eq9ur4.us-east-1.aws.neon.tech/trackfitdb?sslmode=require" 
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL não está definida no arquivo .env")
 
 engine = create_engine(
     DATABASE_URL
