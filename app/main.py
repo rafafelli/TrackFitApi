@@ -40,7 +40,7 @@ def criar_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
     db.add(novo_usuario)
     db.commit()
     db.refresh(novo_usuario)
-    return "Usuário criado com sucesso!"
+    return novo_usuario
 
 @app.get("/usuarios/{usuario_id}", response_model=schemas.UsuarioOut)
 def verificar_usuario(usuario_id: int, db: Session = Depends(get_db)):
