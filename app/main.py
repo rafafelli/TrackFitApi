@@ -5,10 +5,7 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 from .database import engine, SessionLocal
 import bcrypt
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 
