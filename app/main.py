@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from fastapi.middleware.cors import CORSMiddleware 
 from . import models, schemas
 from .database import engine, SessionLocal
 import bcrypt
@@ -12,6 +14,14 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="API de Usuários")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 def get_db():
     db = SessionLocal()
     try:
@@ -21,26 +31,25 @@ def get_db():
 
 @app.post("/usuarios/", response_model=schemas.UsuarioOut, status_code=status.HTTP_201_CREATED)
 def criar_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    # Verificar se o email já existe
+
     usuario_existente = db.query(models.Usuario).filter(
-        models.Usuario.email == usuario.email
+        or_(
+            models.Usuario.email.ilike(usuario.email),
+            models.Usuario.user.ilike(usuario.user)
+        )
     ).first()
 
     if usuario_existente:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Usuário com esse email já existe."
-        )
-
-    user_existente = db.query(models.Usuario).filter(
-        models.Usuario.user == usuario.user
-    ).first()
-
-    if user_existente:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nome de usuário já está em uso."
-        )
+        if usuario_existente.email.lower() == usuario.email.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuário com esse email já existe."
+            )
+        if usuario_existente.user.lower() == usuario.user.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nome de usuário já está em uso."
+            )
 
     hashed_senha = bcrypt.hashpw(usuario.senha.encode('utf-8'), bcrypt.gensalt())
 
@@ -56,6 +65,7 @@ def criar_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
     db.refresh(novo_usuario)
 
     return novo_usuario
+
 
 
 @app.get("/usuarios/{usuario_id}", response_model=schemas.UsuarioOut)
