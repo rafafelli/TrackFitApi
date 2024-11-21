@@ -19,3 +19,28 @@ class UsuarioLogin(BaseModel):
     identificador: str 
     senha: str
 
+class GrupoMuscularBase(BaseModel):
+    nome: str
+
+class GrupoMuscularCreate(GrupoMuscularBase):
+    pass
+
+class GrupoMuscularOut(GrupoMuscularBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+class ExercicioBase(BaseModel):
+    nome: str
+    grupo_muscular: int
+    tipo_exercicio: str
+
+class ExercicioCreate(ExercicioBase):
+    pass
+
+class ExercicioOut(ExercicioBase):
+    id: int
+
+    class Config:
+        orm_mode = True

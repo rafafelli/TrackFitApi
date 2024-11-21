@@ -7,6 +7,8 @@ from .database import engine, SessionLocal
 import bcrypt
 from dotenv import load_dotenv
 import os
+from typing import List
+
 
 load_dotenv()
 
@@ -103,3 +105,86 @@ def login(usuario: schemas.UsuarioLogin, db: Session = Depends(get_db)):
 
     return {"mensagem": "Login realizado com sucesso!"}
 
+@app.post("/grupos-musculares/", response_model=schemas.GrupoMuscularOut, status_code=status.HTTP_201_CREATED)
+def criar_grupo_muscular(grupo: schemas.GrupoMuscularCreate, db: Session = Depends(get_db)):
+
+    grupo_existente = db.query(models.GrupoMuscular).filter(
+        models.GrupoMuscular.nome.ilike(grupo.nome)
+    ).first()
+
+    if grupo_existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Grupo muscular com esse nome já existe."
+        )
+
+    novo_grupo = models.GrupoMuscular(nome=grupo.nome)
+
+    db.add(novo_grupo)
+    db.commit()
+    db.refresh(novo_grupo)
+
+    return novo_grupo
+
+@app.get("/grupos-musculares/{grupo_id}", response_model=schemas.GrupoMuscularOut)
+def obter_grupo_muscular(grupo_id: int, db: Session = Depends(get_db)):
+    grupo = db.query(models.GrupoMuscular).filter(models.GrupoMuscular.id == grupo_id).first()
+    if not grupo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Grupo muscular não encontrado."
+        )
+    return grupo
+
+@app.get("/grupos-musculares-todos", response_model=List[schemas.GrupoMuscularOut])
+def listar_todos_grupos_musculares(db: Session = Depends(get_db)):
+    grupos = db.query(models.GrupoMuscular).all()
+    return grupos
+
+@app.post("/exercicios/", response_model=schemas.ExercicioOut, status_code=status.HTTP_201_CREATED)
+def criar_exercicio(exercicio: schemas.ExercicioCreate, db: Session = Depends(get_db)):
+
+    grupo = db.query(models.GrupoMuscular).filter(models.GrupoMuscular.id == exercicio.grupo_muscular).first()
+    if not grupo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Grupo muscular especificado não existe."
+        )
+
+    exercicio_existente = db.query(models.Exercicio).filter(models.Exercicio.nome.ilike(exercicio.nome)).first()
+    if exercicio_existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Já existe um exercício com esse nome."
+        )
+
+    novo_exercicio = models.Exercicio(
+        nome=exercicio.nome,
+        grupo_muscular=exercicio.grupo_muscular,
+        tipo_exercicio=exercicio.tipo_exercicio
+    )
+
+    db.add(novo_exercicio)
+    db.commit()
+    db.refresh(novo_exercicio)
+
+    return novo_exercicio
+
+
+@app.get("/exercicios/{exercicio_id}", response_model=schemas.ExercicioOut)
+def obter_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
+
+    exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+    
+    if not exercicio:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercício não encontrado."
+        )
+    
+    return exercicio
+
+@app.get("/exercicios-todos", response_model=List[schemas.ExercicioOut])
+def listar_todos_exercicios(db: Session = Depends(get_db)):
+    exercicios = db.query(models.Exercicio).all()
+    return exercicios
