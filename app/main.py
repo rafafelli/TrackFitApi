@@ -142,40 +142,38 @@ def listar_todos_grupos_musculares(db: Session = Depends(get_db)):
     grupos = db.query(models.GrupoMuscular).all()
     return grupos
 
-@app.post("/exercicios/", response_model=schemas.ExercicioOut, status_code=status.HTTP_201_CREATED)
+@app.post("/exercicios/", response_model=schemas.ExercicioOut)
 def criar_exercicio(exercicio: schemas.ExercicioCreate, db: Session = Depends(get_db)):
-
-    grupo = db.query(models.GrupoMuscular).filter(models.GrupoMuscular.id == exercicio.grupo_muscular).first()
-    if not grupo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Grupo muscular especificado não existe."
-        )
-
-    exercicio_existente = db.query(models.Exercicio).filter(models.Exercicio.nome.ilike(exercicio.nome)).first()
-    if exercicio_existente:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Já existe um exercício com esse nome."
-        )
-
     novo_exercicio = models.Exercicio(
         nome=exercicio.nome,
-        grupo_muscular=exercicio.grupo_muscular,
-        tipo_exercicio=exercicio.tipo_exercicio
+        tipo_exercicio=exercicio.tipo_exercicio,
+        grupo_muscular=exercicio.grupo_muscular
     )
-
     db.add(novo_exercicio)
     db.commit()
     db.refresh(novo_exercicio)
+    
+    grupo_muscular_rel = db.query(models.GrupoMuscular).filter(
+        models.GrupoMuscular.id == novo_exercicio.grupo_muscular
+    ).first()
+    
+    return {
+        "id": novo_exercicio.id,
+        "nome": novo_exercicio.nome,
+        "tipo_exercicio": novo_exercicio.tipo_exercicio,
+        "grupo_muscular": {
+            "id": grupo_muscular_rel.id,
+            "nome": grupo_muscular_rel.nome
+        }
+    }
 
-    return novo_exercicio
 
 
 @app.get("/exercicios/{exercicio_id}", response_model=schemas.ExercicioOut)
 def obter_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
-
-    exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+    exercicio = db.query(models.Exercicio).options(
+        joinedload(models.Exercicio.grupo_muscular_rel)
+    ).filter(models.Exercicio.id == exercicio_id).first()
     
     if not exercicio:
         raise HTTPException(
@@ -183,7 +181,16 @@ def obter_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
             detail="Exercício não encontrado."
         )
     
-    return exercicio
+    return {
+        "id": exercicio.id,
+        "nome": exercicio.nome,
+        "tipo_exercicio": exercicio.tipo_exercicio,
+        "grupo_muscular": {
+            "id": exercicio.grupo_muscular_rel.id,
+            "nome": exercicio.grupo_muscular_rel.nome,
+        }
+    }
+
 
 @app.get("/exercicios-todos", response_model=List[schemas.ExercicioOut])
 def listar_todos_exercicios(db: Session = Depends(get_db)):
@@ -205,7 +212,7 @@ def listar_todos_exercicios(db: Session = Depends(get_db)):
 
 @app.put("/exercicios/", response_model=schemas.ExercicioOut)
 def editar_exercicio(
-    exercicio: schemas.ExercicioUpdate,  # Novo schema que inclui o ID
+    exercicio: schemas.ExercicioUpdate,
     db: Session = Depends(get_db)
 ):
     exercicio_db = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
@@ -244,9 +251,8 @@ def editar_exercicio(
         }
     }
 
-@app.delete("/exercicios/{exercicio_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/exercicios/{exercicio_id}", status_code=status.HTTP_200_OK)
 def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
-
     exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
 
     if not exercicio:
@@ -255,8 +261,7 @@ def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
             detail=f"Exercício com ID {exercicio_id} não encontrado."
         )
 
-    # Remover o exercício do banco de dados
     db.delete(exercicio)
     db.commit()
 
-    return {"mensagem": "Exercício deletado com sucesso."}
+    return {"mensagem": "Exercício deletado com sucesso.", "exercicio_deletado": exercicio}
