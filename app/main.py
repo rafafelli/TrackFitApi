@@ -8,6 +8,7 @@ import bcrypt
 from dotenv import load_dotenv
 import os
 from typing import List
+from sqlalchemy.orm import joinedload
 
 
 load_dotenv()
@@ -186,5 +187,77 @@ def obter_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
 
 @app.get("/exercicios-todos", response_model=List[schemas.ExercicioOut])
 def listar_todos_exercicios(db: Session = Depends(get_db)):
-    exercicios = db.query(models.Exercicio).all()
-    return exercicios
+    exercicios = db.query(models.Exercicio).options(joinedload(models.Exercicio.grupo_muscular_rel)).all()
+
+    resultado = [
+        {
+            "id": exercicio.id,
+            "nome": exercicio.nome,
+            "tipo_exercicio": exercicio.tipo_exercicio,
+            "grupo_muscular": {
+                "id": exercicio.grupo_muscular_rel.id,
+                "nome": exercicio.grupo_muscular_rel.nome,
+            }
+        }
+        for exercicio in exercicios
+    ]
+    return resultado
+
+@app.put("/exercicios/{exercicio_id}", response_model=schemas.ExercicioOut)
+def editar_exercicio(
+    exercicio_id: int,
+    exercicio: schemas.ExercicioCreate,
+    db: Session = Depends(get_db)
+):
+    exercicio_db = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+
+    if not exercicio_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercício com ID {exercicio_id} não encontrado."
+        )
+
+    exercicio_existente = db.query(models.Exercicio).filter(
+        models.Exercicio.nome.ilike(exercicio.nome),
+        models.Exercicio.id != exercicio_id
+    ).first()
+
+    if exercicio_existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Exercício com nome '{exercicio.nome}' já existe."
+        )
+
+    exercicio_db.nome = exercicio.nome
+    exercicio_db.grupo_muscular = exercicio.grupo_muscular
+    exercicio_db.tipo_exercicio = exercicio.tipo_exercicio
+
+    db.commit()
+    db.refresh(exercicio_db)
+
+    return {
+        "id": exercicio_db.id,
+        "nome": exercicio_db.nome,
+        "tipo_exercicio": exercicio_db.tipo_exercicio,
+        "grupo_muscular": {
+            "id": exercicio_db.grupo_muscular_rel.id,
+            "nome": exercicio_db.grupo_muscular_rel.nome,
+        }
+    }
+
+@app.delete("/exercicios/{exercicio_id}", status_code=status.HTTP_204_NO_CONTENT)
+def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
+    
+    exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+
+    if not exercicio:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercício com ID {exercicio_id} não encontrado."
+        )
+
+    # Remover o exercício do banco de dados
+    db.delete(exercicio)
+    db.commit()
+
+    return {"mensagem": "Exercício deletado com sucesso."}

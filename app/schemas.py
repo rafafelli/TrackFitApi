@@ -25,8 +25,9 @@ class GrupoMuscularBase(BaseModel):
 class GrupoMuscularCreate(GrupoMuscularBase):
     pass
 
-class GrupoMuscularOut(GrupoMuscularBase):
+class GrupoMuscularOut(BaseModel):
     id: int
+    nome: str
 
     class Config:
         orm_mode = True
@@ -35,12 +36,16 @@ class ExercicioBase(BaseModel):
     nome: str
     grupo_muscular: int
     tipo_exercicio: str
+class ExercicioCreate(BaseModel):
+    nome: str
+    grupo_muscular: int 
+    tipo_exercicio: str
 
-class ExercicioCreate(ExercicioBase):
-    pass
-
-class ExercicioOut(ExercicioBase):
+class ExercicioOut(BaseModel):
     id: int
+    nome: str
+    tipo_exercicio: str
+    grupo_muscular: GrupoMuscularOut
 
     class Config:
         orm_mode = True
