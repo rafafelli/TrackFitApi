@@ -203,23 +203,22 @@ def listar_todos_exercicios(db: Session = Depends(get_db)):
     ]
     return resultado
 
-@app.put("/exercicios/{exercicio_id}", response_model=schemas.ExercicioOut)
+@app.put("/exercicios/", response_model=schemas.ExercicioOut)
 def editar_exercicio(
-    exercicio_id: int,
-    exercicio: schemas.ExercicioCreate,
+    exercicio: schemas.ExercicioUpdate,  # Novo schema que inclui o ID
     db: Session = Depends(get_db)
 ):
-    exercicio_db = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+    exercicio_db = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
 
     if not exercicio_db:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exercício com ID {exercicio_id} não encontrado."
+            detail=f"Exercício com ID {exercicio.id} não encontrado."
         )
 
     exercicio_existente = db.query(models.Exercicio).filter(
         models.Exercicio.nome.ilike(exercicio.nome),
-        models.Exercicio.id != exercicio_id
+        models.Exercicio.id != exercicio.id
     ).first()
 
     if exercicio_existente:
@@ -247,7 +246,7 @@ def editar_exercicio(
 
 @app.delete("/exercicios/{exercicio_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
-    
+
     exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
 
     if not exercicio:

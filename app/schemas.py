@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
 
 class UsuarioCreate(BaseModel):
     nome: str = Field(..., min_length=3, max_length=50)
@@ -49,3 +50,9 @@ class ExercicioOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ExercicioUpdate(BaseModel):
+    id: int
+    nome: str
+    grupo_muscular: int
+    tipo_exercicio: str
