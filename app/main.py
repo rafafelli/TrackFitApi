@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from fastapi.middleware.cors import CORSMiddleware 
 from . import models, schemas
@@ -268,18 +268,15 @@ def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
 
 @app.post("/rotinas/", response_model=schemas.RotinaOut, status_code=status.HTTP_201_CREATED)
 def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
-    """
-    Cria uma nova rotina com os detalhes associados.
-    """
-    # Passo 1: Criar a rotina
+    # Criar a rotina
     nova_rotina = models.Rotina(titulo=rotina.titulo)
     db.add(nova_rotina)
     db.commit()
     db.refresh(nova_rotina)
 
-    # Passo 2: Processar os exercícios e detalhes
+    # Processar os exercícios e seus detalhes
     for exercicio in rotina.exercicios:
-        # Verificar se o exercício existe no banco
+        # Validar se o exercício existe
         db_exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
         if not db_exercicio:
             raise HTTPException(
@@ -287,23 +284,44 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
                 detail=f"Exercício com ID {exercicio.id} não encontrado."
             )
 
-        # Criar os detalhes para cada série do exercício
+        # Criar os detalhes
         for detalhe in exercicio.detalhes:
-            novo_detalhe = models.Detalhes(
-                fk_exercicio=exercicio.id,
-                fk_rotina=nova_rotina.id,
-                serie=detalhe.serie,
-                peso=detalhe.peso,
-                repeticao=detalhe.repeticoes,
-            )
-            db.add(novo_detalhe)
+            try:
+                novo_detalhe = models.Detalhes(
+                    fk_exercicio=exercicio.id,
+                    fk_rotina=nova_rotina.id,
+                    serie=int(detalhe.serie),  # Converter para int
+                    peso=detalhe.peso,
+                    repeticao=int(detalhe.repeticoes),  # Converter para int
+                )
+                db.add(novo_detalhe)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Os campos 'serie' e 'repeticoes' devem ser números inteiros."
+                )
 
-    # Confirmar as alterações no banco
     db.commit()
 
-    # Carregar os detalhes da rotina criada para retorno
+    # Carregar os detalhes completos para retorno
     rotina_completa = db.query(models.Rotina).options(
         joinedload(models.Rotina.detalhes).joinedload(models.Detalhes.exercicio_rel)
     ).filter(models.Rotina.id == nova_rotina.id).first()
 
     return rotina_completa
+
+@app.get("/rotinas/{rotina_id}", response_model=schemas.RotinaOut, status_code=status.HTTP_200_OK)
+def obter_rotina(rotina_id: int, db: Session = Depends(get_db)):
+    # Consultar a rotina com os detalhes e exercícios associados
+    rotina = db.query(models.Rotina).options(
+        joinedload(models.Rotina.detalhes).joinedload(models.Detalhes.exercicio_rel).joinedload(models.Exercicio.grupo_muscular_rel)
+    ).filter(models.Rotina.id == rotina_id).first()
+
+    if not rotina:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Rotina com ID {rotina_id} não encontrada."
+        )
+
+    # Retornar os dados
+    return rotina

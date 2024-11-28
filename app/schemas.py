@@ -58,9 +58,9 @@ class ExercicioUpdate(BaseModel):
     tipo_exercicio: str
 
 class DetalhesCreate(BaseModel):
-    serie: int
+    serie: str  # Alterado para string
     peso: str
-    repeticoes: int
+    repeticoes: str  # Alterado para string
 
 class ExercicioCreate(BaseModel):
     id: int
@@ -75,10 +75,10 @@ class RotinaCreate(BaseModel):
 class DetalhesOut(BaseModel):
     id: int
     fk_exercicio: int
-    fk_rotina: int
-    serie: int
+    fk_rotina: int 
+    serie: str
     peso: str
-    repeticao: int
+    repeticao: str
 
     class Config:
         orm_mode = True
@@ -88,4 +88,4 @@ class RotinaOut(BaseModel):
     detalhes: List[DetalhesOut]
 
     class Config:
-        orm_mode = True    
+        orm_mode = True

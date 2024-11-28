@@ -49,5 +49,5 @@ class Detalhes(Base):
     peso = Column(String(50), nullable=True)
 
     # Relacionamentos
-    exercicio = relationship("Exercicio", back_populates="detalhes")
+    exercicio_rel = relationship("Exercicio")  # Adicione isso
     rotina = relationship("Rotina", back_populates="detalhes")
