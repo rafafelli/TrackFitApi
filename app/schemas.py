@@ -89,3 +89,6 @@ class RotinaOut(BaseModel):
 
     class Config:
         orm_mode = True    
+
+class RotinaDelete(BaseModel):
+    id_rotina: int
