@@ -266,7 +266,7 @@ def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
 
     return {"mensagem": "Exercício deletado com sucesso.", "exercicio_deletado": exercicio}
 
-@app.post("/rotinas/", response_model=schemas.RotinaOut, status_code=status.HTTP_201_CREATED)
+@app.post("/rotinas/", status_code=status.HTTP_201_CREATED)
 def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
     # Criar a rotina
     nova_rotina = models.Rotina(titulo=rotina.titulo)
@@ -303,25 +303,51 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
 
     db.commit()
 
-    # Carregar os detalhes completos para retorno
-    rotina_completa = db.query(models.Rotina).options(
-        joinedload(models.Rotina.detalhes).joinedload(models.Detalhes.exercicio_rel)
-    ).filter(models.Rotina.id == nova_rotina.id).first()
-
-    return rotina_completa
-
-@app.get("/rotinas/{rotina_id}", response_model=schemas.RotinaOut, status_code=status.HTTP_200_OK)
+    # Retornar mensagem de sucesso
+    return {"mensagem": "Rotina adicionada com sucesso!"}
+@app.get("/rotinas/{rotina_id}")
 def obter_rotina(rotina_id: int, db: Session = Depends(get_db)):
-    # Consultar a rotina com os detalhes e exercícios associados
-    rotina = db.query(models.Rotina).options(
-        joinedload(models.Rotina.detalhes).joinedload(models.Detalhes.exercicio_rel).joinedload(models.Exercicio.grupo_muscular_rel)
-    ).filter(models.Rotina.id == rotina_id).first()
-
+    rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id).first()
     if not rotina:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Rotina com ID {rotina_id} não encontrada."
-        )
+        raise HTTPException(status_code=404, detail="Rotina não encontrada")
+    
+    detalhes_rotina = (
+        db.query(models.Detalhes)
+        .filter(models.Detalhes.fk_rotina == rotina_id)
+        .all()
+    )
 
-    # Retornar os dados
-    return rotina
+    # Dicionário para agrupar os exercícios
+    exercicios_dict = {}
+
+    for detalhe in detalhes_rotina:
+        exercicio_id = detalhe.fk_exercicio
+        # Obter o exercício e seu grupo muscular relacionado
+        exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+        grupo_muscular = exercicio.grupo_muscular_rel  # Acessa o relacionamento com o GrupoMuscular
+
+        # Adiciona o exercício ao dicionário, se ainda não estiver presente
+        if exercicio_id not in exercicios_dict:
+            exercicios_dict[exercicio_id] = {
+                "id": exercicio_id,
+                "nome": exercicio.nome,  # Nome do exercício
+                "grupo_muscular": grupo_muscular.nome,  # Nome do grupo muscular
+                "tipo_exercicio": exercicio.tipo_exercicio,  # Tipo do exercício
+                "detalhes": []
+            }
+        
+        # Adiciona os detalhes do exercício
+        exercicios_dict[exercicio_id]["detalhes"].append({
+            "serie": detalhe.serie,
+            "peso": detalhe.peso,
+            "repeticoes": detalhe.repeticao,
+        })
+
+    # Agora criamos a resposta com os exercícios agrupados
+    rotina_resposta = {
+        "id": rotina.id,
+        "titulo": rotina.titulo,
+        "exercicios": list(exercicios_dict.values())  # Converte o dicionário em uma lista
+    }
+
+    return rotina_resposta
