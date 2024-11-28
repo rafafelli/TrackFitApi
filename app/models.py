@@ -27,3 +27,27 @@ class GrupoMuscular(Base):
     nome = Column(String(100), nullable=False, index=True)
 
     exercicios = relationship("Exercicio", back_populates="grupo_muscular_rel", cascade="all, delete")
+
+class Rotina(Base):
+    __tablename__ = "rotinas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    titulo = Column(String(100), nullable=False)
+
+    # Relacionamento com os detalhes
+    detalhes = relationship("Detalhes", back_populates="rotina", cascade="all, delete")
+
+# Modelo Detalhes
+class Detalhes(Base):
+    __tablename__ = "detalhes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fk_exercicio = Column(Integer, ForeignKey("exercicios.id"), nullable=False)
+    fk_rotina = Column(Integer, ForeignKey("rotinas.id"), nullable=False)
+    serie = Column(String(50), nullable=False)
+    repeticao = Column(String(50), nullable=False)
+    peso = Column(String(50), nullable=True)
+
+    # Relacionamentos
+    exercicio = relationship("Exercicio", back_populates="detalhes")
+    rotina = relationship("Rotina", back_populates="detalhes")

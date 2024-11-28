@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 
 class UsuarioCreate(BaseModel):
     nome: str = Field(..., min_length=3, max_length=50)
@@ -56,3 +56,36 @@ class ExercicioUpdate(BaseModel):
     nome: str
     grupo_muscular: int
     tipo_exercicio: str
+
+class DetalhesCreate(BaseModel):
+    serie: int
+    peso: str
+    repeticoes: int
+
+class ExercicioCreate(BaseModel):
+    id: int
+    nome: str
+    tipo_exercicio: str
+    detalhes: List[DetalhesCreate]
+
+class RotinaCreate(BaseModel):
+    titulo: str
+    exercicios: List[ExercicioCreate]
+
+class DetalhesOut(BaseModel):
+    id: int
+    fk_exercicio: int
+    fk_rotina: int
+    serie: int
+    peso: str
+    repeticao: int
+
+    class Config:
+        orm_mode = True
+class RotinaOut(BaseModel):
+    id: int
+    titulo: str
+    detalhes: List[DetalhesOut]
+
+    class Config:
+        orm_mode = True    

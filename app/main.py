@@ -265,3 +265,45 @@ def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"mensagem": "Exercício deletado com sucesso.", "exercicio_deletado": exercicio}
+
+@app.post("/rotinas/", response_model=schemas.RotinaOut, status_code=status.HTTP_201_CREATED)
+def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
+    """
+    Cria uma nova rotina com os detalhes associados.
+    """
+    # Passo 1: Criar a rotina
+    nova_rotina = models.Rotina(titulo=rotina.titulo)
+    db.add(nova_rotina)
+    db.commit()
+    db.refresh(nova_rotina)
+
+    # Passo 2: Processar os exercícios e detalhes
+    for exercicio in rotina.exercicios:
+        # Verificar se o exercício existe no banco
+        db_exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
+        if not db_exercicio:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Exercício com ID {exercicio.id} não encontrado."
+            )
+
+        # Criar os detalhes para cada série do exercício
+        for detalhe in exercicio.detalhes:
+            novo_detalhe = models.Detalhes(
+                fk_exercicio=exercicio.id,
+                fk_rotina=nova_rotina.id,
+                serie=detalhe.serie,
+                peso=detalhe.peso,
+                repeticao=detalhe.repeticoes,
+            )
+            db.add(novo_detalhe)
+
+    # Confirmar as alterações no banco
+    db.commit()
+
+    # Carregar os detalhes da rotina criada para retorno
+    rotina_completa = db.query(models.Rotina).options(
+        joinedload(models.Rotina.detalhes).joinedload(models.Detalhes.exercicio_rel)
+    ).filter(models.Rotina.id == nova_rotina.id).first()
+
+    return rotina_completa
