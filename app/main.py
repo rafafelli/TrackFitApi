@@ -305,7 +305,7 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
 
     # Retornar mensagem de sucesso
     return {"mensagem": "Rotina adicionada com sucesso!"}
-@app.get("/rotinas/{rotina_id}")
+@app.get("/rotina/{rotina_id}")
 def obter_rotina(rotina_id: int, db: Session = Depends(get_db)):
     rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id).first()
     if not rotina:
@@ -351,3 +351,53 @@ def obter_rotina(rotina_id: int, db: Session = Depends(get_db)):
     }
 
     return rotina_resposta
+
+@app.get("/rotinas")
+def obter_todas_rotinas(db: Session = Depends(get_db)):
+    rotinas = db.query(models.Rotina).all()  # Pega todas as rotinas
+
+    # Dicionário para agrupar os exercícios
+    rotinas_resposta = []
+
+    for rotina in rotinas:
+        detalhes_rotina = (
+            db.query(models.Detalhes)
+            .filter(models.Detalhes.fk_rotina == rotina.id)
+            .all()
+        )
+
+        # Dicionário para agrupar os exercícios
+        exercicios_dict = {}
+
+        for detalhe in detalhes_rotina:
+            exercicio_id = detalhe.fk_exercicio
+            # Obter o exercício e seu grupo muscular relacionado
+            exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+            grupo_muscular = exercicio.grupo_muscular_rel  # Acessa o relacionamento com o GrupoMuscular
+
+            # Adiciona o exercício ao dicionário, se ainda não estiver presente
+            if exercicio_id not in exercicios_dict:
+                exercicios_dict[exercicio_id] = {
+                    "id": exercicio_id,
+                    "nome": exercicio.nome,  # Nome do exercício
+                    "grupo_muscular": grupo_muscular.nome,  # Nome do grupo muscular
+                    "tipo_exercicio": exercicio.tipo_exercicio,  # Tipo do exercício
+                    "detalhes": []
+                }
+
+            # Adiciona os detalhes do exercício
+            exercicios_dict[exercicio_id]["detalhes"].append({
+                "serie": detalhe.serie,
+                "peso": detalhe.peso,
+                "repeticoes": detalhe.repeticao,
+            })
+
+        # Adiciona a rotina e seus exercícios agrupados
+        rotina_resposta = {
+            "id": rotina.id,
+            "titulo": rotina.titulo,
+            "exercicios": list(exercicios_dict.values())  # Converte o dicionário em uma lista
+        }
+        rotinas_resposta.append(rotina_resposta)
+
+    return rotinas_resposta
