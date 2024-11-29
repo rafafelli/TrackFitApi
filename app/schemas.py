@@ -64,7 +64,6 @@ class DetalhesCreate(BaseModel):
     serie: int
     peso: str
     repeticoes: int
-    user_id: int  # Campo user_id para associar os detalhes ao usuário
 
 class ExercicioCreateWithRotinas(BaseModel):
     id: int
@@ -95,3 +94,5 @@ class RotinaOut(BaseModel):
     class Config:
         orm_mode = True    
 
+class RotinaDelete(BaseModel):
+    id_rotina: int

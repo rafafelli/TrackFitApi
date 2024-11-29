@@ -104,7 +104,7 @@ def login(usuario: schemas.UsuarioLogin, db: Session = Depends(get_db)):
             detail="Senha incorreta."
         )
 
-    return {"mensagem": "Login realizado com sucesso!"}
+    return {"mensagem": "Login realizado com sucesso!", "user_id": usuario_db.id}
 
 @app.post("/grupos-musculares/", response_model=schemas.GrupoMuscularOut, status_code=status.HTTP_201_CREATED)
 def criar_grupo_muscular(grupo: schemas.GrupoMuscularCreate, db: Session = Depends(get_db)):
@@ -280,8 +280,7 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
     db.refresh(nova_rotina)
 
     for exercicio in rotina.exercicios:
-        db_exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id,
-                                                         models.Exercicio.user_id == exercicio.user_id).first()
+        db_exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
         if not db_exercicio:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -296,7 +295,6 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
                     fk_rotina=nova_rotina.id,
                     serie=int(detalhe.serie),
                     peso=detalhe.peso,
-                    user_id=nova_rotina.user_id,
                     repeticao=int(detalhe.repeticoes),
                 )
                 db.add(novo_detalhe)
@@ -310,9 +308,10 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
 
     # Retornar mensagem de suesso
     return {"mensagem": "Rotina adicionada com sucesso!"}
-@app.get("/rotina/{rotina_id}")
-def obter_rotina(rotina_id: int, db: Session = Depends(get_db)):
-    rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id).first()
+@app.get("/rotina/{rotina_id}/{user_id}")
+def obter_rotina(rotina_id: int, user_id: int, db: Session = Depends(get_db)):
+    rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id,
+                                            models.Rotina.user_id == user_id).first()
     if not rotina:
         raise HTTPException(status_code=404, detail="Rotina não encontrada")
     
@@ -352,9 +351,9 @@ def obter_rotina(rotina_id: int, db: Session = Depends(get_db)):
 
     return rotina_resposta
 
-@app.get("/rotinas")
-def obter_todas_rotinas(db: Session = Depends(get_db)):
-    rotinas = db.query(models.Rotina).all() 
+@app.get("/rotinas/{user_id}")
+def obter_todas_rotinas(user_id:int, db: Session = Depends(get_db)):
+    rotinas = db.query(models.Rotina).filter(models.Rotina.user_id == user_id).all() 
 
     rotinas_resposta = []
 
@@ -396,3 +395,24 @@ def obter_todas_rotinas(db: Session = Depends(get_db)):
         rotinas_resposta.append(rotina_resposta)
 
     return rotinas_resposta
+
+@app.delete("/rotinas/deletar", status_code=status.HTTP_200_OK)
+def deletar_rotina(rotina_id: schemas.RotinaDelete, db: Session = Depends(get_db)):
+    rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id.id_rotina).first()
+
+    if not rotina:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Rotina com ID {rotina_id.id_rotina} não encontrada."
+        )
+
+    detalhes_rotina = db.query(models.Detalhes).filter(models.Detalhes.fk_rotina == rotina_id.id_rotina).all()
+
+    if detalhes_rotina:
+        for detalhe in detalhes_rotina:
+            db.delete(detalhe)
+
+    db.delete(rotina)
+    db.commit()
+
+    return {"mensagem": "Rotina e seus detalhes deletados com sucesso."}

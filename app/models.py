@@ -51,6 +51,5 @@ class Detalhes(Base):
     serie = Column(String(50), nullable=False)
     repeticao = Column(String(50), nullable=False)
     peso = Column(String(50), nullable=True)
-    user_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     exercicio_rel = relationship("Exercicio")
     rotina = relationship("Rotina", back_populates="detalhes")
