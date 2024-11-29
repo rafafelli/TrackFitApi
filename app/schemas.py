@@ -62,7 +62,7 @@ class DetalhesCreate(BaseModel):
     peso: str
     repeticoes: int
 
-class ExercicioCreate(BaseModel):
+class ExercicioCreateWithRotinas(BaseModel):
     id: int
     nome: str
     tipo_exercicio: str
@@ -70,7 +70,7 @@ class ExercicioCreate(BaseModel):
 
 class RotinaCreate(BaseModel):
     titulo: str
-    exercicios: List[ExercicioCreate]
+    exercicios: List[ExercicioCreateWithRotinas]
 
 class DetalhesOut(BaseModel):
     id: int

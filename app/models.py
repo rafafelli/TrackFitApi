@@ -34,10 +34,8 @@ class Rotina(Base):
     id = Column(Integer, primary_key=True, index=True)
     titulo = Column(String(100), nullable=False)
 
-    # Relacionamento com os detalhes
     detalhes = relationship("Detalhes", back_populates="rotina", cascade="all, delete")
 
-# Modelo Detalhes
 class Detalhes(Base):
     __tablename__ = "detalhes"
 
@@ -48,6 +46,5 @@ class Detalhes(Base):
     repeticao = Column(String(50), nullable=False)
     peso = Column(String(50), nullable=True)
 
-    # Relacionamentos
     exercicio_rel = relationship("Exercicio")  # Adicione isso
     rotina = relationship("Rotina", back_populates="detalhes")
