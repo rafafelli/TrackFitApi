@@ -396,9 +396,9 @@ def obter_todas_rotinas(user_id:int, db: Session = Depends(get_db)):
 
     return rotinas_resposta
 
-@app.delete("/rotinas/deletar", status_code=status.HTTP_200_OK)
-def deletar_rotina(rotina_id: schemas.RotinaDelete, db: Session = Depends(get_db)):
-    rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id.id_rotina).first()
+@app.delete("/rotinas/deletar/{rotina_id}", status_code=status.HTTP_200_OK)
+def deletar_rotina(rotina_id: int, db: Session = Depends(get_db)):
+    rotina = db.query(models.Rotina).filter(models.Rotina.id == rotina_id).first()
 
     if not rotina:
         raise HTTPException(
@@ -406,7 +406,7 @@ def deletar_rotina(rotina_id: schemas.RotinaDelete, db: Session = Depends(get_db
             detail=f"Rotina com ID {rotina_id.id_rotina} não encontrada."
         )
 
-    detalhes_rotina = db.query(models.Detalhes).filter(models.Detalhes.fk_rotina == rotina_id.id_rotina).all()
+    detalhes_rotina = db.query(models.Detalhes).filter(models.Detalhes.fk_rotina == rotina_id).all()
 
     if detalhes_rotina:
         for detalhe in detalhes_rotina:
