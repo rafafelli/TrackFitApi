@@ -146,6 +146,7 @@ def listar_todos_grupos_musculares(db: Session = Depends(get_db)):
 def criar_exercicio(exercicio: schemas.ExercicioCreate, db: Session = Depends(get_db)):
     novo_exercicio = models.Exercicio(
         nome=exercicio.nome,
+        user_id=exercicio.user_id,
         tipo_exercicio=exercicio.tipo_exercicio,
         grupo_muscular=exercicio.grupo_muscular
     )
@@ -169,11 +170,12 @@ def criar_exercicio(exercicio: schemas.ExercicioCreate, db: Session = Depends(ge
 
 
 
-@app.get("/exercicios/{exercicio_id}", response_model=schemas.ExercicioOut)
-def obter_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
+@app.get("/exercicios/{exercicio_id}/{user_id}", response_model=schemas.ExercicioOut)
+def obter_exercicio(exercicio_id: int,user_id:int, db: Session = Depends(get_db)):
     exercicio = db.query(models.Exercicio).options(
         joinedload(models.Exercicio.grupo_muscular_rel)
-    ).filter(models.Exercicio.id == exercicio_id).first()
+    ).filter(models.Exercicio.id == exercicio_id,
+             models.Exercicio.user_id == user_id).first()
     
     if not exercicio:
         raise HTTPException(
@@ -192,9 +194,11 @@ def obter_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
     }
 
 
-@app.get("/exercicios-todos", response_model=List[schemas.ExercicioOut])
-def listar_todos_exercicios(db: Session = Depends(get_db)):
-    exercicios = db.query(models.Exercicio).options(joinedload(models.Exercicio.grupo_muscular_rel)).all()
+@app.get("/exercicios-todos/{user_id}", response_model=List[schemas.ExercicioOut])
+def listar_todos_exercicios(user_id:int, db: Session = Depends(get_db)):
+    exercicios = db.query(models.Exercicio).options(
+        joinedload(models.Exercicio.grupo_muscular_rel)
+        ).filter(models.Exercicio.user_id==user_id).all()
 
     resultado = [
         {
@@ -215,7 +219,8 @@ def editar_exercicio(
     exercicio: schemas.ExercicioUpdate,
     db: Session = Depends(get_db)
 ):
-    exercicio_db = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
+    exercicio_db = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id,
+                                                     models.Exercicio.user_id == exercicio.user_id).first()
 
     if not exercicio_db:
         raise HTTPException(
@@ -268,13 +273,15 @@ def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
 
 @app.post("/rotinas/", status_code=status.HTTP_201_CREATED)
 def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
-    nova_rotina = models.Rotina(titulo=rotina.titulo)
+    nova_rotina = models.Rotina(titulo=rotina.titulo,
+                                user_id=rotina.user_id)
     db.add(nova_rotina)
     db.commit()
     db.refresh(nova_rotina)
 
     for exercicio in rotina.exercicios:
-        db_exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id).first()
+        db_exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio.id,
+                                                         models.Exercicio.user_id == exercicio.user_id).first()
         if not db_exercicio:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -289,6 +296,7 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
                     fk_rotina=nova_rotina.id,
                     serie=int(detalhe.serie),
                     peso=detalhe.peso,
+                    user_id=nova_rotina.user_id,
                     repeticao=int(detalhe.repeticoes),
                 )
                 db.add(novo_detalhe)

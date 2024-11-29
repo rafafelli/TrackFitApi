@@ -37,10 +37,12 @@ class ExercicioBase(BaseModel):
     nome: str
     grupo_muscular: int
     tipo_exercicio: str
+
 class ExercicioCreate(BaseModel):
     nome: str
     grupo_muscular: int 
     tipo_exercicio: str
+    user_id: int
 
 class ExercicioOut(BaseModel):
     id: int
@@ -53,6 +55,7 @@ class ExercicioOut(BaseModel):
 
 class ExercicioUpdate(BaseModel):
     id: int
+    user_id: int
     nome: str
     grupo_muscular: int
     tipo_exercicio: str
@@ -61,6 +64,7 @@ class DetalhesCreate(BaseModel):
     serie: int
     peso: str
     repeticoes: int
+    user_id: int  # Campo user_id para associar os detalhes ao usuário
 
 class ExercicioCreateWithRotinas(BaseModel):
     id: int
@@ -70,6 +74,7 @@ class ExercicioCreateWithRotinas(BaseModel):
 
 class RotinaCreate(BaseModel):
     titulo: str
+    user_id: int
     exercicios: List[ExercicioCreateWithRotinas]
 
 class DetalhesOut(BaseModel):
@@ -89,3 +94,4 @@ class RotinaOut(BaseModel):
 
     class Config:
         orm_mode = True    
+
