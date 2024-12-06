@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from datetime import datetime
 from .database import Base
 from sqlalchemy.orm import relationship
 
@@ -52,5 +53,5 @@ class Detalhes(Base):
     repeticao = Column(String(50), nullable=False)
     peso = Column(String(50), nullable=True)
     exercicio_rel = relationship("Exercicio")
-    data = Column(Date, nullable=True)
+    data = Column(DateTime, nullable=True)
     rotina = relationship("Rotina", back_populates="detalhes")

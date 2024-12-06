@@ -7,9 +7,10 @@ from .database import engine, SessionLocal
 import bcrypt
 from dotenv import load_dotenv
 import os
-from typing import List
+from typing import List, Dict
 from sqlalchemy.orm import joinedload
-from datetime import date
+from datetime import datetime
+from sqlalchemy import desc
 
 
 load_dotenv()
@@ -298,7 +299,7 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
                     serie=int(detalhe.serie),
                     peso=detalhe.peso,
                     repeticao=int(detalhe.repeticoes),
-                    data=date.today()
+                    data=datetime.now() 
                 )
                 db.add(novo_detalhe)
             except ValueError:
@@ -418,3 +419,42 @@ def deletar_rotina(rotina_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"mensagem": "Rotina e seus detalhes deletados com sucesso."}
+
+
+@app.get("/detalhes/{exercicio_id}")
+def obter_detalhes_por_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
+    exercicio = db.query(models.Exercicio).filter(models.Exercicio.id == exercicio_id).first()
+    if not exercicio:
+        raise HTTPException(status_code=404, detail="Exercício não encontrado")
+
+    detalhes = (
+        db.query(models.Detalhes)
+        .filter(models.Detalhes.fk_exercicio == exercicio_id)
+        .order_by(desc(models.Detalhes.data))
+        .all()
+    )
+
+    detalhes_por_rotina: Dict[int, List[dict]] = {}
+    for detalhe in detalhes:
+        fk_rotina = detalhe.fk_rotina
+        if fk_rotina not in detalhes_por_rotina:
+            detalhes_por_rotina[fk_rotina] = []
+
+        detalhes_por_rotina[fk_rotina].append({
+            "id": detalhe.id,
+            "serie": detalhe.serie,
+            "repeticao": detalhe.repeticao,
+            "peso": detalhe.peso,
+            "data": detalhe.data,
+        })
+
+    resposta = {
+        "exercicio": {
+            "id": exercicio.id,
+            "nome": exercicio.nome,
+            "tipo_exercicio": exercicio.tipo_exercicio,
+        },
+        "detalhes_por_rotina": detalhes_por_rotina,
+    }
+
+    return resposta
