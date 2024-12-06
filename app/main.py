@@ -453,8 +453,8 @@ def obter_detalhes_por_exercicio(exercicio_id: int, db: Session = Depends(get_db
             "id": exercicio.id,
             "nome": exercicio.nome,
             "tipo_exercicio": exercicio.tipo_exercicio,
-        },
         "detalhes_por_rotina": detalhes_por_rotina,
+        }
     }
 
     return resposta
