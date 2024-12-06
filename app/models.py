@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Date
 from .database import Base
 from sqlalchemy.orm import relationship
 
@@ -37,7 +37,7 @@ class Rotina(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     titulo = Column(String(100), nullable=False)
-    user_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)  # Adicionando user_id
+    user_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
 
     detalhes = relationship("Detalhes", back_populates="rotina", cascade="all, delete")
 
@@ -52,4 +52,5 @@ class Detalhes(Base):
     repeticao = Column(String(50), nullable=False)
     peso = Column(String(50), nullable=True)
     exercicio_rel = relationship("Exercicio")
+    data = Column(Date, nullable=True)
     rotina = relationship("Rotina", back_populates="detalhes")

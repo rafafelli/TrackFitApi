@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 from typing import List
 from sqlalchemy.orm import joinedload
+from datetime import date
 
 
 load_dotenv()
@@ -273,8 +274,10 @@ def deletar_exercicio(exercicio_id: int, db: Session = Depends(get_db)):
 
 @app.post("/rotinas/", status_code=status.HTTP_201_CREATED)
 def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
-    nova_rotina = models.Rotina(titulo=rotina.titulo,
-                                user_id=rotina.user_id)
+    nova_rotina = models.Rotina(
+        titulo=rotina.titulo,
+        user_id=rotina.user_id
+    )
     db.add(nova_rotina)
     db.commit()
     db.refresh(nova_rotina)
@@ -287,7 +290,6 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
                 detail=f"Exercício com ID {exercicio.id} não encontrado."
             )
 
-        # Criar os detalhes
         for detalhe in exercicio.detalhes:
             try:
                 novo_detalhe = models.Detalhes(
@@ -296,6 +298,7 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
                     serie=int(detalhe.serie),
                     peso=detalhe.peso,
                     repeticao=int(detalhe.repeticoes),
+                    data=date.today()
                 )
                 db.add(novo_detalhe)
             except ValueError:
@@ -306,7 +309,6 @@ def criar_rotina(rotina: schemas.RotinaCreate, db: Session = Depends(get_db)):
 
     db.commit()
 
-    # Retornar mensagem de suesso
     return {"mensagem": "Rotina adicionada com sucesso!"}
 @app.get("/rotina/{rotina_id}/{user_id}")
 def obter_rotina(rotina_id: int, user_id: int, db: Session = Depends(get_db)):
